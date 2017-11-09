@@ -14,7 +14,8 @@
             "S3TemplateUri",
             "RdsTemplateUri",
             "IamTemplateUri",
-            "Ec2TemplateUri"
+            "Ec2TemplateUri",
+            "ElbTemplateUri"
           ]
         },
         {
@@ -51,8 +52,8 @@
             "default": "Jira Parameters"
           },
           "Parameters": [
-            "JiraInstallBinUrl",
-            "JiraInstallerUrl",
+            "JiraBinaryInstallerUrl",
+            "JiraAppPrepUrl",
             "JiraProxyFqdn",
             "JiraHomeSharePath",
             "JiraHomeShareType",
@@ -60,6 +61,18 @@
             "BackupVolumeMountPath",
             "BackupVolumeSize",
             "BackupVolumeType"
+          ]
+        },
+        {
+          "Label": {
+            "default": "ELB Parameters"
+          },
+          "Parameters": [
+            "ProxyPrettyName",
+            "JiraListenerCert",
+            "JiraListenPort",
+            "JiraServicePort",
+            "PubElbSubnets"
           ]
         },
         {
@@ -239,6 +252,11 @@
       "Description": "URI for the template that creates Jira's EFS shares.",
       "Type": "String"
     },
+    "ElbTemplateUri": {
+      "AllowedPattern": "^$|^http://.*$|^https://.*$",
+      "Description": "URI for the template that creates the user-facing web-proxy for the Jira service.",
+      "Type": "String"
+    },
     "EpelRepo": {
       "AllowedPattern": "^[a-z][a-z0-9-]*$",
       "ConstraintDescription": "An alphanumeric string that represents the EPEL yum repo's label.",
@@ -288,6 +306,18 @@
       "Description": "Amazon EC2 instance type",
       "Type": "String"
     },
+    "JiraAppPrepUrl": {
+      "AllowedPattern": "^$|^http://.*$|^https://.*$",
+      "Default": "",
+      "Description": "URL to the Jira Datacenter EC2 application installer/configuration script.",
+      "Type": "String"
+    },
+    "JiraBinaryInstallerUrl": {
+      "AllowedPattern": "^$|^http://.*$|^https://.*$",
+      "Default": "",
+      "Description": "URL to the Jira Datacenter binary-installer file.",
+      "Type": "String"
+    },
     "JiraHomeSharePath": {
       "Default": "",
       "Description": "Share-path of shared Jira-home.",
@@ -301,21 +331,33 @@
       "Description": "Type of network share hosting persisted Jira-home content.",
       "Type": "String"
     },
-    "JiraInstallBinUrl": {
-      "AllowedPattern": "^$|^http://.*$|^https://.*$",
+    "JiraListenPort": {
+      "Default": "443",
+      "Description": "TCP Port number on which the Jira ELB listens for requests.",
+      "MaxValue": "65535",
+      "MinValue": "1",
+      "Type": "Number"
+    },
+    "JiraListenerCert": {
       "Default": "",
-      "Description": "URL to the Jira Datacenter binary-installer file.",
+      "Description": "Name/ID of the ACM-managed SSL Certificate to protect public listener.",
       "Type": "String"
     },
-    "JiraInstallerUrl": {
+    "JiraOsPrepUrl": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
       "Default": "",
-      "Description": "URL to the Jira Datacenter EC2 provisioning-script.",
+      "Description": "URL to the Jira Datacenter EC2 OS-preparationscript.",
       "Type": "String"
     },
     "JiraProxyFqdn": {
       "Description": "FQDN of the front-end proxy host/service for Jira.",
       "Type": "String"
+    },
+    "JiraServicePort": {
+      "Default": "80",
+      "Description": "TCP Port number that the Jira host listens to.",
+      "MaxValue": "65535",
+      "Type": "Number"
     },
     "PgsqlVersion": {
       "AllowedValues": [
@@ -348,6 +390,14 @@
       "Default": "jirabuild",
       "Description": "Default login user account name.",
       "Type": "String"
+    },
+    "ProxyPrettyName": {
+      "Description": "A short, human-friendly label to assign to the ELB (no capital letters).",
+      "Type": "String"
+    },
+    "PubElbSubnets": {
+      "Description": "Select three subnets - each from different, user-facing Availability Zones.",
+      "Type": "List<AWS::EC2::Subnet::Id>"
     },
     "PyStache": {
       "Default": "pystache",
@@ -408,6 +458,8 @@
           "EpelRepo": { "Ref": "EpelRepo" },
           "Hostname": { "Ref": "Ec2Hostname" },
           "InstanceType": { "Ref": "InstanceType" },
+          "JiraAppPrepUrl": { "Ref": "JiraAppPrepUrl" },
+          "JiraBinaryInstallerUrl": { "Ref": "JiraBinaryInstallerUrl" },
           "JiraHomeSharePath": {
             "Fn::Join": [
               ":",
@@ -418,8 +470,7 @@
             ]
           },
           "JiraHomeShareType": { "Ref": "JiraHomeShareType" },
-          "JiraInstallBinUrl": { "Ref": "JiraInstallBinUrl" },
-          "JiraInstallerUrl": { "Ref": "JiraInstallerUrl" },
+          "JiraOsPrepUrl": { "Ref": "JiraOsPrepUrl" },
           "JiraPgsqlHost": {
             "Fn::GetAtt": [ "RdsRes", "Outputs.RdsEndpointAddress" ]
           },
@@ -429,78 +480,70 @@
           "JiraProxyFqdn": { "Ref": "JiraProxyFqdn" },
           "KeyPairName": { "Ref": "Ec2ProvKey" },
           "NoPublicIp": "true",
-          "NoReboot": "true",
-          "PipIndexFips": {
-            "Ref": "PipIndexFips"
-          },
-          "PipRpm": {
-            "Ref": "PipRpm"
-          },
-          "ProvisionUser": {
-            "Ref": "ProvisionUser"
-          },
-          "PyStache": {
-            "Ref": "PyStache"
-          },
+          "NoReboot": "false",
+          "PipIndexFips": { "Ref": "PipIndexFips" },
+          "PipRpm": { "Ref": "PipRpm" },
+          "ProvisionUser": { "Ref": "ProvisionUser" },
+          "PyStache": { "Ref": "PyStache" },
           "SecurityGroupIds": {
             "Fn::Join": [
               ",",
               [
-                {
-                  "Fn::GetAtt": [
-                    "SgRes",
-                    "Outputs.AppSg"
-                  ]
-                },
-                {
-                  "Fn::GetAtt": [
-                    "SgRes",
-                    "Outputs.NasSg"
-                  ]
-                },
-                {
-                  "Fn::GetAtt": [
-                    "SgRes",
-                    "Outputs.RdsSg"
-                  ]
-                }
+                { "Fn::GetAtt": [ "SgRes", "Outputs.AppSg" ] },
+                { "Fn::GetAtt": [ "SgRes", "Outputs.NasSg" ] },
+                { "Fn::GetAtt": [ "SgRes", "Outputs.RdsSg" ] }
               ]
             ]
           },
-          "SubnetIds": {
-            "Ref": "Ec2Subnet"
-          }
+          "SubnetId": { "Ref": "Ec2Subnet" }
         },
-        "TemplateURL": {
-          "Ref": "Ec2TemplateUri"
-        }
+        "TemplateURL": { "Ref": "Ec2TemplateUri" }
       },
       "Type": "AWS::CloudFormation::Stack"
     },
     "EfsRes": {
       "Properties": {
         "Parameters": {
-          "EfsSg": {
-            "Fn::GetAtt": [
-              "SgRes",
-              "Outputs.NasSg"
-            ]
-          },
+          "EfsSg": { "Fn::GetAtt": [ "SgRes", "Outputs.NasSg" ] },
           "EfsSubnet": {
             "Fn::Join": [
               ",",
-              {
-                "Ref": "HaSubnets"
-              }
+              { "Ref": "HaSubnets" }
             ]
           },
-          "ServiceTld": {
-            "Ref": "ServiceTld"
-          }
+          "ServiceTld": { "Ref": "ServiceTld" }
         },
-        "TemplateURL": {
-          "Ref": "EfsTemplateUri"
-        }
+        "TemplateURL": { "Ref": "EfsTemplateUri" }
+      },
+      "Type": "AWS::CloudFormation::Stack"
+    },
+    "ElbRes": {
+      "Properties": {
+        "Parameters": {
+          "JiraListenerCert": { "Ref": "JiraListenerCert" },
+          "JiraListenPort": { "Ref": "JiraListenPort" },
+          "JiraServicePort": { "Ref": "JiraServicePort" },
+          "HaSubnets": {
+            "Fn::Join": [
+              ",",
+              { "Ref": "PubElbSubnets" }
+            ]
+          },
+          "JiraInstanceId": {
+            "Fn::GetAtt": [ "Ec2Res", "Outputs.JiraInstanceId" ]
+          },
+          "ProxyPrettyName": { "Ref": "ProxyPrettyName" },
+          "SecurityGroupIds": {
+            "Fn::Join": [
+              ",",
+              [
+                { "Fn::GetAtt": [ "SgRes", "Outputs.AppSg" ] }
+              ]
+            ]
+          },
+          "TargetVPC": { "Ref": "TargetVPC" }
+        },
+        "TemplateURL": { "Ref": "ElbTemplateUri" }
       },
       "Type": "AWS::CloudFormation::Stack"
     },
@@ -511,9 +554,7 @@
           "RolePrefix": { "Ref": "RolePrefix" },
           "ServiceTld": { "Ref": "ServiceTld" }
         },
-        "TemplateURL": {
-          "Ref": "IamTemplateUri"
-        },
+        "TemplateURL": { "Ref": "IamTemplateUri" },
         "TimeoutInMinutes": "10"
       },
       "Type": "AWS::CloudFormation::Stack"
@@ -521,58 +562,31 @@
     "RdsRes": {
       "Properties": {
         "Parameters": {
-          "DbAdminName": {
-            "Ref": "DbAdminName"
-          },
-          "DbAdminPass": {
-            "Ref": "DbAdminPass"
-          },
-          "DbDataSize": {
-            "Ref": "DbDataSize"
-          },
-          "DbInstanceName": {
-            "Ref": "DbInstanceName"
-          },
-          "DbInstanceType": {
-            "Ref": "DbInstanceType"
-          },
+          "DbAdminName": { "Ref": "DbAdminName" },
+          "DbAdminPass": { "Ref": "DbAdminPass" },
+          "DbDataSize": { "Ref": "DbDataSize" },
+          "DbInstanceName": { "Ref": "DbInstanceName" },
+          "DbInstanceType": { "Ref": "DbInstanceType" },
           "DbIsMultiAz": "true",
-          "DbNodeName": {
-            "Ref": "DbNodeName"
-          },
-          "DbSecurityGroup": {
-            "Fn::GetAtt": [
-              "SgRes",
-              "Outputs.RdsSg"
-            ]
-          },
+          "DbNodeName": { "Ref": "DbNodeName" },
+          "DbSecurityGroup": { "Fn::GetAtt": [ "SgRes", "Outputs.RdsSg" ] },
           "DbSubnets": {
             "Fn::Join": [
               ",",
-              {
-                "Ref": "HaSubnets"
-              }
+              { "Ref": "HaSubnets" }
             ]
           },
-          "PgsqlVersion": {
-            "Ref": "PgsqlVersion"
-          },
-          "TargetVPC": {
-            "Ref": "TargetVPC"
-          }
+          "PgsqlVersion": { "Ref": "PgsqlVersion" },
+          "TargetVPC": { "Ref": "TargetVPC" }
         },
-        "TemplateURL": {
-          "Ref": "RdsTemplateUri"
-        }
+        "TemplateURL": { "Ref": "RdsTemplateUri" }
       },
       "Type": "AWS::CloudFormation::Stack"
     },
     "S3Res": {
       "Properties": {
         "Parameters": {},
-        "TemplateURL": {
-          "Ref": "S3TemplateUri"
-        },
+        "TemplateURL": { "Ref": "S3TemplateUri" },
         "TimeoutInMinutes": "10"
       },
       "Type": "AWS::CloudFormation::Stack"
@@ -580,13 +594,9 @@
     "SgRes": {
       "Properties": {
         "Parameters": {
-          "TargetVPC": {
-            "Ref": "TargetVPC"
-          }
+          "TargetVPC": { "Ref": "TargetVPC" }
         },
-        "TemplateURL": {
-          "Ref": "SgTemplateUri"
-        },
+        "TemplateURL": { "Ref": "SgTemplateUri" },
         "TimeoutInMinutes": "10"
       },
       "Type": "AWS::CloudFormation::Stack"
