@@ -410,7 +410,7 @@
                       "ExecStart=/opt/atlassian/jira/bin/start-jira.sh\n",
                       "ExecStop=/opt/atlassian/jira/bin/stop-jira.sh\n",
                       "ExecReload=/opt/atlassian/jira/bin/jira.sh | sleep 60 | /opt/atlassian/jira/bin/jira.sh\n",
-                      "TimeoutStopSec=15\n",
+                      "TimeoutStopSec=10\n",
                       "\n",
                       "[Install]\n",
                       "WantedBy=multi-user.target\n"
