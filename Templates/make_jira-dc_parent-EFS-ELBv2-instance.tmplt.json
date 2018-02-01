@@ -452,6 +452,9 @@
         "Parameters": {
           "AdminPubkeyURL": { "Ref": "AdminPubkeyURL" },
           "AmiId": { "Ref": "AmiId" },
+          "BackupBucket": {
+            "Fn::GetAtt": [ "S3Res", "Outputs.BackupBucket" ]
+          },
           "BackupVolumeDevice": { "Ref": "BackupVolumeDevice" },
           "BackupVolumeMountPath": { "Ref": "BackupVolumeMountPath" },
           "BackupVolumeSize": { "Ref": "BackupVolumeSize" },
