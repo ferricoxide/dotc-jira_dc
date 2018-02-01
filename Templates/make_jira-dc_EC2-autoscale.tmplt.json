@@ -79,6 +79,11 @@
         { "Fn::Equals": [ { "Ref": "WatchmakerEnvironment" }, "" ] }
       ]
     },
+    "UseKeyPair": {
+      "Fn::Not": [
+        { "Fn::Equals": [ { "Ref": "KeyPairName" }, "" ] }
+      ]
+    },
     "UseS3Source": {
       "Fn::Not": [
         { "Fn::Equals": [ { "Ref": "WatchmakerS3Source" }, "false" ] }
@@ -253,6 +258,10 @@
     "Domainname": {
       "ConstraintDescription": "An alphanumeric string to complete the domain portion of the instance's FQDN.",
       "Description": "Suffix for Jira's hostname and DNS record",
+      "Type": "String"
+    },
+    "ElbArn": {
+      "Description": "ARN of the ELBv2 TargetGroup to attach scaling-group to.",
       "Type": "String"
     },
     "EpelRepo": {
@@ -484,6 +493,7 @@
       "Properties": {
         "DesiredCapacity": { "Ref": "DesiredCapacity" },
         "LaunchConfigurationName": { "Ref": "JiraLC" },
+        "TargetGroupARNs": [ { "Ref" : "ElbArn" } ],
         "MaxSize": { "Ref": "MaxCapacity" },
         "MinSize": { "Ref": "MinCapacity" },
         "Tags": [
@@ -585,7 +595,6 @@
                       "ExecStop=/opt/atlassian/jira/bin/stop-jira.sh\n",
                       "ExecReload=/opt/atlassian/jira/bin/jira.sh",
                       " | sleep 60 | /opt/atlassian/jira/bin/jira.sh\n",
-                      "TimeoutStopSec=10\n",
                       "\n",
                       "[Install]\n",
                       "WantedBy=multi-user.target\n"
@@ -723,6 +732,9 @@
           },
           "reboot": {
             "commands": {
+              "1-stop-jira": {
+                "command": "systemctl stop jira"
+              },
               "10-reboot": {
                 "command": "shutdown -r +1 &"
               }
@@ -1093,7 +1105,13 @@
         },
         "ImageId": { "Ref": "AmiId" },
         "InstanceType": { "Ref": "InstanceType" },
-        "KeyName": { "Ref": "KeyPairName" },
+        "KeyName": {
+          "Fn::If": [
+            "UseKeyPair",
+            { "Ref": "KeyPairName" },
+            { "Ref": "AWS::NoValue" }
+          ]
+        },
         "SecurityGroups": { "Ref": "SecurityGroupIds" },
         "UserData": {
           "Fn::Base64": {
