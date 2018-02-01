@@ -151,13 +151,14 @@
         },
         {
           "Label": {
-            "default": "Backup EBS Volume"
+            "default": "Backup Configuration"
           },
           "Parameters": [
             "BackupVolumeDevice",
             "BackupVolumeMountPath",
             "BackupVolumeSize",
-            "BackupVolumeType"
+            "BackupVolumeType",
+            "BackupBucket"
           ]
         },
         {
@@ -207,6 +208,11 @@
     "AmiId": {
       "AllowedPattern": "^ami-[0-9a-z]{8}$|^ami-[0-9a-z]{17}$",
       "Description": "ID of the AMI to launch",
+      "Type": "String"
+    },
+    "BackupBucket": {
+      "AllowedPattern": "^[a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9]*$|^$",
+      "Description": "S3 Bucket to host backups of Jira DB- and FS-data",
       "Type": "String"
     },
     "BackupVolumeDevice": {
@@ -601,6 +607,30 @@
                     ]
                   ]
                 }
+              },
+              "/etc/cron.d/jira-data-backup": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "SHELL=/bin/bash\n",
+                      "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n",
+                      "AWS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n",
+                      "AWS_DEFAULT_REGION=",
+                       { "Ref": "AWS::Region" },
+                       "\n",
+                      "REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n",
+                      "# Ensure attachments (etc.) get backed up\n",
+                      "0 23 * * * jira aws s3 sync --quiet",
+                      " /var/atlassian/application-data/jira/data s3://",
+                       { "Ref": "BackupBucket" },
+                      "/Backups/daily/$(date '+\\%A')/data/\n"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
               }
             }
           },
