@@ -622,9 +622,14 @@
                       "REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n",
                       "# Ensure attachments (etc.) get backed up\n",
                       "0 23 * * * jira aws s3 sync --quiet",
-                      " /var/atlassian/application-data/jira/data s3://",
+                       " /var/atlassian/application-data/jira/data s3://",
                        { "Ref": "BackupBucket" },
-                      "/Backups/daily/$(date '+\\%A')/data/\n"
+                       "/Backups/daily/$(date '+\\%A')/data/\n",
+                      "# Ensure automated-exports get pushed to S3\n",
+                      "0 23 * * * jira aws s3 sync --quiet",
+                       " /var/atlassian/application-data/jira/export s3://",
+                       { "Ref": "BackupBucket" },
+                       "/Backups/export/\n"
                     ]
                   ]
                 },
