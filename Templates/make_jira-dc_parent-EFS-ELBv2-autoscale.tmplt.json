@@ -23,14 +23,20 @@
             "default": "EC2 Parameters"
           },
           "Parameters": [
-            "InstanceType",
-            "AmiId",
-            "Ec2Subnet",
             "Ec2Hostname",
             "Ec2Domain",
+            "AmiId",
+            "InstanceType",
+            "MinCapacity",
             "ProvisionUser",
             "Ec2ProvKey",
-            "AdminPubkeyURL"
+            "AdminPubkeyURL",
+            "NoUpdates",
+            "ToggleCfnInitUpdate",
+            "ToggleNewInstances",
+            "WatchmakerEnvironment",
+            "WatchmakerS3Source",
+            "WatchmakerConfig"
           ]
         },
         {
@@ -52,6 +58,7 @@
             "default": "Jira Parameters"
           },
           "Parameters": [
+            "JiraOsPrepUrl",
             "JiraBinaryInstallerUrl",
             "JiraAppPrepUrl",
             "JiraProxyFqdn",
@@ -242,10 +249,6 @@
     "Ec2ProvKey": {
       "Description": "Public/private key pairs allowing the provisioning-user to securely connect to the instance after it launches.",
       "Type": "AWS::EC2::KeyPair::KeyName"
-    },
-    "Ec2Subnet": {
-      "Description": "Subnet to associate to the Instance",
-      "Type": "AWS::EC2::Subnet::Id"
     },
     "EfsTemplateUri": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
